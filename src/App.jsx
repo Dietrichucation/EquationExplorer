@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { ArrowRight, Check, X, BookOpen, Calculator, Trophy, Info, RefreshCw, Hash, MousePointerClick } from 'lucide-react';
+import { ArrowRight, Check, X, BookOpen, Calculator, Trophy, Info, RefreshCw, Hash, Settings } from 'lucide-react';
 
 // --- Components ---
 
@@ -108,6 +108,9 @@ const App = () => {
   const [b, setB] = useState(1);
   const [c, setC] = useState(-1);
   const [d, setD] = useState(4);
+
+  // State for Graph Settings (New)
+  const [graphLimit, setGraphLimit] = useState(10);
   
   // State for Practice Quiz
   const [quizProblem, setQuizProblem] = useState(null);
@@ -131,16 +134,12 @@ const App = () => {
     return 'One Solution';
   };
 
-  const getIntersectionPoint = (m1, b1, m2, b2) => {
-    if (m1 === m2) return null;
-    const x = (b2 - b1) / (m1 - m2);
-    const y = m1 * x + b1;
-    return { x: parseFloat(x.toFixed(2)), y: parseFloat(y.toFixed(2)) };
-  };
-
-  const generateDataPoints = (m1, b1, m2, b2) => {
+  // Updated to use dynamic limit
+  const generateDataPoints = (m1, b1, m2, b2, limit) => {
     const data = [];
-    for (let x = -10; x <= 10; x++) {
+    // Generate slightly more data than visible so lines don't cut off abruptly at edges
+    const range = limit + 2; 
+    for (let x = -range; x <= range; x++) {
       data.push({
         x,
         y1: m1 * x + b1,
@@ -161,14 +160,12 @@ const App = () => {
   const generateQuizProblem = () => {
     const types = ['one', 'no', 'infinite'];
     const type = types[Math.floor(Math.random() * types.length)];
-    
-    // Randomly decide if this is an Equation question or a Graph question
     const style = Math.random() > 0.5 ? 'equation' : 'graph';
 
     let newA, newB, newC, newD;
 
     if (type === 'one') {
-      newA = Math.floor(Math.random() * 8) - 4; // Smaller range for cleaner graphs
+      newA = Math.floor(Math.random() * 8) - 4; 
       newC = newA + (Math.floor(Math.random() * 3) + 1) * (Math.random() > 0.5 ? 1 : -1); 
       newB = Math.floor(Math.random() * 10) - 5;
       newD = Math.floor(Math.random() * 10) - 5;
@@ -190,8 +187,6 @@ const App = () => {
 
   const checkQuiz = (selectedType) => {
     const correctType = quizProblem.type === 'one' ? 'One Solution' : quizProblem.type === 'no' ? 'No Solution' : 'Infinite Solutions';
-    
-    // For graph mode, we check if the selected text STARTS with the correct type
     const isCorrect = selectedType.startsWith(correctType);
     
     if (isCorrect) {
@@ -289,7 +284,7 @@ const App = () => {
 
   const renderExplore = () => {
     const solutionType = getSolutionType(a, b, c, d);
-    const data = generateDataPoints(a, b, c, d);
+    const data = generateDataPoints(a, b, c, d, graphLimit); // Use state limit
 
     return (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -297,6 +292,25 @@ const App = () => {
           <Card className="bg-yellow-50 border-yellow-200">
             <h3 className="font-bold text-yellow-800 flex items-center gap-2"><Info size={18} /> Tip</h3>
             <p className="text-sm text-yellow-800 mt-2">Experiment with the sliders to see how the lines change.</p>
+          </Card>
+
+          {/* New Graph Settings Control */}
+          <Card className="bg-gray-50 border-gray-200">
+            <h3 className="font-bold text-gray-700 flex items-center gap-2 mb-2"><Settings size={18} /> Graph Axis Range</h3>
+            <div className="flex items-center gap-4">
+              <span className="font-mono font-bold text-gray-500">-{graphLimit}</span>
+              <input
+                type="range"
+                min="5"
+                max="50"
+                step="5"
+                value={graphLimit}
+                onChange={(e) => setGraphLimit(Number(e.target.value))}
+                className="flex-grow h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-gray-600"
+              />
+              <span className="font-mono font-bold text-gray-500">+{graphLimit}</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">Adjust to zoom in or out.</p>
           </Card>
 
           <Card title="Left Side (Red Line)">
@@ -326,8 +340,20 @@ const App = () => {
                <ResponsiveContainer width="100%" height="100%">
                  <LineChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                   <XAxis dataKey="x" type="number" domain={[-10, 10]} allowDataOverflow={false} stroke="#9ca3af" />
-                   <YAxis type="number" domain={[-10, 10]} allowDataOverflow={false} stroke="#9ca3af" />
+                   {/* Enforce Fixed Domain */}
+                   <XAxis 
+                     dataKey="x" 
+                     type="number" 
+                     domain={[-graphLimit, graphLimit]} 
+                     allowDataOverflow={true} 
+                     stroke="#9ca3af" 
+                   />
+                   <YAxis 
+                     type="number" 
+                     domain={[-graphLimit, graphLimit]} 
+                     allowDataOverflow={true} 
+                     stroke="#9ca3af" 
+                   />
                    <ReferenceLine x={0} stroke="#9ca3af" />
                    <ReferenceLine y={0} stroke="#9ca3af" />
                    <Line type="monotone" dataKey="y1" stroke="#ef4444" strokeWidth={3} dot={false} isAnimationActive={false} />
@@ -414,10 +440,11 @@ const App = () => {
           ) : (
              <div className="w-full h-[250px] mb-8 bg-white rounded-lg border border-gray-200">
                <ResponsiveContainer width="100%" height="100%">
-                 <LineChart data={generateDataPoints(quizProblem.a, quizProblem.b, quizProblem.c, quizProblem.d)} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                 {/* Fixed Domain for Quiz as well for consistency */}
+                 <LineChart data={generateDataPoints(quizProblem.a, quizProblem.b, quizProblem.c, quizProblem.d, 10)} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
                    <CartesianGrid strokeDasharray="3 3" />
-                   <XAxis dataKey="x" type="number" domain={[-10, 10]} allowDataOverflow={false} stroke="#9ca3af" />
-                   <YAxis type="number" domain={[-10, 10]} allowDataOverflow={false} stroke="#9ca3af" />
+                   <XAxis dataKey="x" type="number" domain={[-10, 10]} allowDataOverflow={true} stroke="#9ca3af" />
+                   <YAxis type="number" domain={[-10, 10]} allowDataOverflow={true} stroke="#9ca3af" />
                    <ReferenceLine x={0} stroke="#9ca3af" />
                    <ReferenceLine y={0} stroke="#9ca3af" />
                    <Line type="monotone" dataKey="y1" stroke="#ef4444" strokeWidth={3} dot={false} isAnimationActive={false} />
@@ -505,10 +532,11 @@ const App = () => {
               {renderEquation(a, b, c, d)}
               <div className="w-full h-[200px] mt-4 opacity-75">
                  <ResponsiveContainer width="100%" height="100%">
-                   <LineChart data={generateDataPoints(a, b, c, d)} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                   {/* Challenge Graph is also fixed to standard 10 for simplicity unless we want to use the adjustable limit here too. Staying simple with 10. */}
+                   <LineChart data={generateDataPoints(a, b, c, d, 10)} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
                      <CartesianGrid strokeDasharray="3 3" />
-                     <XAxis hide type="number" domain={[-10, 10]} />
-                     <YAxis hide type="number" domain={[-10, 10]} />
+                     <XAxis hide type="number" domain={[-10, 10]} allowDataOverflow={true} />
+                     <YAxis hide type="number" domain={[-10, 10]} allowDataOverflow={true} />
                      <Line type="monotone" dataKey="y1" stroke="#ef4444" strokeWidth={2} dot={false} isAnimationActive={false} />
                      <Line type="monotone" dataKey="y2" stroke="#3b82f6" strokeWidth={2} dot={false} isAnimationActive={false} />
                    </LineChart>
