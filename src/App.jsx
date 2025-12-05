@@ -109,7 +109,7 @@ const App = () => {
   const [c, setC] = useState(-1);
   const [d, setD] = useState(4);
 
-  // State for Graph Settings (New)
+  // State for Graph Settings
   const [graphLimit, setGraphLimit] = useState(10);
   
   // State for Practice Quiz
@@ -134,10 +134,15 @@ const App = () => {
     return 'One Solution';
   };
 
-  // Updated to use dynamic limit
+  const getIntersectionPoint = (m1, b1, m2, b2) => {
+    if (m1 === m2) return null;
+    const x = (b2 - b1) / (m1 - m2);
+    const y = m1 * x + b1;
+    return { x: parseFloat(x.toFixed(2)), y: parseFloat(y.toFixed(2)) };
+  };
+
   const generateDataPoints = (m1, b1, m2, b2, limit) => {
     const data = [];
-    // Generate slightly more data than visible so lines don't cut off abruptly at edges
     const range = limit + 2; 
     for (let x = -range; x <= range; x++) {
       data.push({
@@ -284,7 +289,7 @@ const App = () => {
 
   const renderExplore = () => {
     const solutionType = getSolutionType(a, b, c, d);
-    const data = generateDataPoints(a, b, c, d, graphLimit); // Use state limit
+    const data = generateDataPoints(a, b, c, d, graphLimit);
 
     return (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -315,14 +320,16 @@ const App = () => {
 
           <Card title="Left Side (Red Line)">
             <p className="text-sm text-gray-500 mb-4">Equation: <span className="font-mono text-red-500 font-bold">y = {a}x + {b}</span></p>
-            <VariableSlider label="Slope (a)" value={a} onChange={setA} color="#ef4444" />
+            {/* UPDATED LABEL: Slope (m) */}
+            <VariableSlider label="Slope (m)" value={a} onChange={setA} color="#ef4444" />
             <VariableSlider label="Y-Intercept (b)" value={b} onChange={setB} color="#ef4444" />
           </Card>
           
           <Card title="Right Side (Blue Line)">
             <p className="text-sm text-gray-500 mb-4">Equation: <span className="font-mono text-blue-500 font-bold">y = {c}x + {d}</span></p>
-            <VariableSlider label="Slope (c)" value={c} onChange={setC} color="#3b82f6" />
-            <VariableSlider label="Y-Intercept (d)" value={d} onChange={setD} color="#3b82f6" />
+            {/* UPDATED LABELS: Slope (m) and Intercept (b) */}
+            <VariableSlider label="Slope (m)" value={c} onChange={setC} color="#3b82f6" />
+            <VariableSlider label="Y-Intercept (b)" value={d} onChange={setD} color="#3b82f6" />
           </Card>
         </div>
 
@@ -340,7 +347,6 @@ const App = () => {
                <ResponsiveContainer width="100%" height="100%">
                  <LineChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                   {/* Enforce Fixed Domain */}
                    <XAxis 
                      dataKey="x" 
                      type="number" 
@@ -412,7 +418,6 @@ const App = () => {
       </div>
     );
 
-    // Dynamic Options based on style
     const options = quizProblem.style === 'equation' 
       ? ['One Solution', 'No Solution', 'Infinite Solutions']
       : [
@@ -440,7 +445,6 @@ const App = () => {
           ) : (
              <div className="w-full h-[250px] mb-8 bg-white rounded-lg border border-gray-200">
                <ResponsiveContainer width="100%" height="100%">
-                 {/* Fixed Domain for Quiz as well for consistency */}
                  <LineChart data={generateDataPoints(quizProblem.a, quizProblem.b, quizProblem.c, quizProblem.d, 10)} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
                    <CartesianGrid strokeDasharray="3 3" />
                    <XAxis dataKey="x" type="number" domain={[-10, 10]} allowDataOverflow={true} stroke="#9ca3af" />
@@ -510,10 +514,11 @@ const App = () => {
           </Card>
 
           <div className="grid grid-cols-2 gap-4">
-            {!challenge.locked.includes('a') && <VariableInput label="Left Slope (x)" value={a} onChange={setA} color="#ef4444" />}
-            {!challenge.locked.includes('b') && <VariableInput label="Left Intercept" value={b} onChange={setB} color="#ef4444" />}
-            {!challenge.locked.includes('c') && <VariableInput label="Right Slope (x)" value={c} onChange={setC} color="#3b82f6" />}
-            {!challenge.locked.includes('d') && <VariableInput label="Right Intercept" value={d} onChange={setD} color="#3b82f6" />}
+            {/* UPDATED LABELS HERE TOO: m and b */}
+            {!challenge.locked.includes('a') && <VariableInput label="Left Slope (m)" value={a} onChange={setA} color="#ef4444" />}
+            {!challenge.locked.includes('b') && <VariableInput label="Left Intercept (b)" value={b} onChange={setB} color="#ef4444" />}
+            {!challenge.locked.includes('c') && <VariableInput label="Right Slope (m)" value={c} onChange={setC} color="#3b82f6" />}
+            {!challenge.locked.includes('d') && <VariableInput label="Right Intercept (b)" value={d} onChange={setD} color="#3b82f6" />}
           </div>
           
           <Button onClick={submitChallenge} className="w-full py-4 text-lg shadow-lg" variant={challengeSuccess ? "success" : "primary"}>
@@ -532,7 +537,6 @@ const App = () => {
               {renderEquation(a, b, c, d)}
               <div className="w-full h-[200px] mt-4 opacity-75">
                  <ResponsiveContainer width="100%" height="100%">
-                   {/* Challenge Graph is also fixed to standard 10 for simplicity unless we want to use the adjustable limit here too. Staying simple with 10. */}
                    <LineChart data={generateDataPoints(a, b, c, d, 10)} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
                      <CartesianGrid strokeDasharray="3 3" />
                      <XAxis hide type="number" domain={[-10, 10]} allowDataOverflow={true} />
